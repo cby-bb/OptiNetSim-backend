@@ -1,8 +1,10 @@
+# app/models/network.py
+
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from bson import ObjectId
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError  # 导入 ValidationError
 from uuid6 import uuid6
 
 
@@ -89,6 +91,9 @@ class ElementBase(BaseModel):
 
 
 class ElementCreate(ElementBase):
+    # element_id is used for temporary linking during import/sub-topology insertion
+    # It will be replaced by a newly generated UUID6 upon storage in DB.
+    element_id: Optional[str] = None  # <-- 新增或修改此行
     params: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -129,6 +134,8 @@ class ServiceRequirements(BaseModel):
 
 class ServiceBase(BaseModel):
     name: str
+    # path can contain element_ids of nodes and connections, depending on implementation detail.
+    # For simplicity, let's assume it's a list of node element_ids forming a logical path.
     path: List[str]
     service_requirements: Optional[ServiceRequirements] = None
     service_constraints: Dict[str, Any] = Field(default_factory=dict)
@@ -201,9 +208,14 @@ class NetworkDetailResponse(NetworkResponse):
     elements: List[ElementInDB]
     connections: List[ConnectionInDB]
     services: List[ServiceInDB]
-    si_config: SI  # 修改这里
-    span_config: Span  # 修改这里
+    si_config: SI
+    span_config: Span
     simulation_config: SimulationConfig
+
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+    }
 
 
 # --- Import/Export Models ---

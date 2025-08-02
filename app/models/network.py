@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from bson import ObjectId
 from pydantic import BaseModel, Field
 from uuid6 import uuid6
-from .common import PyObjectId
 
 
 # --- Helper Models for Global Settings ---
@@ -85,7 +84,6 @@ class EdfaOperational(BaseModel):
 class ElementBase(BaseModel):
     name: str
     type: Literal["Transceiver", "Edfa", "Roadm", "Fiber", "Fused"]
-    library_id: Optional[str] = None
     type_variety: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
@@ -102,7 +100,6 @@ class ElementInDB(ElementBase):
 class ElementUpdate(BaseModel):
     name: Optional[str] = None
     type: Optional[Literal["Transceiver", "Edfa", "Roadm", "Fiber", "Fused"]] = None
-    library_id: Optional[str] = None
     type_variety: Optional[str] = None
     params: Optional[Dict[str, Any]] = None
     metadata: Optional[Dict[str, Any]] = None
@@ -171,7 +168,7 @@ class NetworkUpdate(NetworkBase):
 
 
 class NetworkInDB(NetworkBase):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: ObjectId = Field(default_factory=ObjectId, alias="_id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     elements: List[ElementInDB] = Field(default_factory=list)
@@ -184,7 +181,6 @@ class NetworkInDB(NetworkBase):
     model_config = {
         "populate_by_name": True,
         "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str},
     }
 
 

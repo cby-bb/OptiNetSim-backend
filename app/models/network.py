@@ -177,8 +177,8 @@ class NetworkInDB(NetworkBase):
     elements: List[ElementInDB] = Field(default_factory=list)
     connections: List[ConnectionInDB] = Field(default_factory=list)
     services: List[ServiceInDB] = Field(default_factory=list)
-    SI: SI = Field(default_factory=SI)
-    Span: Span = Field(default_factory=Span)
+    si_config: SI = Field(default_factory=SI, alias="SI")
+    span_config: Span = Field(default_factory=Span, alias="Span")
     simulation_config: SimulationConfig = Field(default_factory=SimulationConfig)
 
     model_config = {
@@ -205,8 +205,8 @@ class NetworkDetailResponse(NetworkResponse):
     elements: List[ElementInDB]
     connections: List[ConnectionInDB]
     services: List[ServiceInDB]
-    SI: SI
-    Span: Span
+    si_config: SI  # 修改这里
+    span_config: Span  # 修改这里
     simulation_config: SimulationConfig
 
 
@@ -217,8 +217,8 @@ class NetworkImport(BaseModel):
     elements: List[ElementCreate] = Field(default_factory=list)
     connections: List[ConnectionCreate] = Field(default_factory=list)
     services: List[ServiceCreate] = Field(default_factory=list)
-    SI: SI = Field(default_factory=SI)
-    Span: Span = Field(default_factory=Span)
+    si_config: SI = Field(default_factory=SI, alias="SI")
+    span_config: Span = Field(default_factory=Span, alias="Span")
     simulation_config: SimulationConfig = Field(default_factory=SimulationConfig)
 
 

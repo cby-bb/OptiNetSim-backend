@@ -15,7 +15,7 @@ This project provides a RESTful API service for managing optical network topolog
 The project follows a modular structure to separate concerns:
 
 ```
-optical-network-api/
+OptiNetSim-backend/
 ├── .env                  # Environment variables
 ├── pyproject.toml        # Project dependencies (for uv)
 ├── main.py               # FastAPI application entrypoint
@@ -39,24 +39,18 @@ optical-network-api/
 
 1.  **Clone the repository:**
     ```bash
-    git clone <your-repo-url>
-    cd optical-network-api
+    git clone https://github.com/zerosignal0101/OptiNetSim-backend.git
+    cd OptiNetSim-backend
     ```
 
-2.  **Create a virtual environment:**
-    ```bash
-    python -m venv .venv
-    source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
-    ```
-
-3.  **Install dependencies using `uv`:**
+2.  **Install dependencies using `uv`:**
     ```bash
     uv pip install -r pyproject.toml
     # Or more simply with uv >= 0.1.18
     uv sync
     ```
 
-4.  **Configure Environment Variables:**
+3.  **Configure Environment Variables:**
     Create a `.env` file in the project root by copying the example:
     ```bash
     cp .env.example .env

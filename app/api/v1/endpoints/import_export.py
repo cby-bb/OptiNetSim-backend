@@ -69,7 +69,10 @@ async def import_network(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"code": "INTERNAL_SERVER_ERROR", "message": "An unexpected error occurred during network import."}
+            detail={
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": f"An unexpected error occurred during network import. {str(e)}"
+            }
         )
 
 
@@ -98,20 +101,20 @@ async def insert_topology(
             network_id=str(updated_network.id),
             **updated_network.model_dump()
         )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,  # Use 409 for conflicts, as per docs
-            detail={"code": "RESOURCE_CONFLICT", "message": str(e)}
-        )
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "INVALID_INSERT_DATA", "message": "Invalid data provided for topology insertion.",
                     "details": e.errors()}
         )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,  # Use 409 for conflicts, as per docs
+            detail={"code": "RESOURCE_CONFLICT", "message": str(e)}
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"code": "INTERNAL_SERVER_ERROR",
-                    "message": "An unexpected error occurred during topology insertion."}
+                    "message": f"An unexpected error occurred during topology insertion. {str(e)}"}
         )

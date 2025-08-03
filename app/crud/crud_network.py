@@ -11,7 +11,7 @@ from ..models.network import (
     NetworkCreate, NetworkInDB, NetworkUpdate, ElementCreate, ElementInDB,
     ElementUpdate, ConnectionCreate, ConnectionInDB, ServiceCreate, ServiceInDB, ServiceUpdate,
     NetworkImport, SubTopologyImport,
-    SI, Span, SimulationConfig  # 导入全局配置模型
+    SIConfig, SpanConfig, SimulationConfig  # 导入全局配置模型
 )
 
 COLLECTION = "networks"
@@ -284,27 +284,24 @@ async def update_simulation_config(db: AsyncIOMotorDatabase, network_id: str, pa
     SimulationConfig]:
     if not ObjectId.is_valid(network_id):
         return None
-    # Use the alias 'simulation_config' directly since it's the field name in NetworkInDB
     update_data = payload.model_dump(exclude_unset=True)
     return await update_global_setting(db, network_id, "simulation_config", update_data)
 
 
-async def update_si_config(db: AsyncIOMotorDatabase, network_id: str, payload: SI) -> Optional[SI]:
+async def update_si_config(db: AsyncIOMotorDatabase, network_id: str, payload: SIConfig) -> Optional[SIConfig]:
     if not ObjectId.is_valid(network_id):
         return None
-    # Use the alias 'si_config' directly since it's the field name in NetworkInDB
     update_data = payload.model_dump(exclude_unset=True)
-    result = await update_global_setting(db, network_id, "si_config", update_data)
-    return SI(**result) if result else None
+    result = await update_global_setting(db, network_id, "SI", update_data)
+    return SIConfig(**result) if result else None
 
 
-async def update_span_config(db: AsyncIOMotorDatabase, network_id: str, payload: Span) -> Optional[Span]:
+async def update_span_config(db: AsyncIOMotorDatabase, network_id: str, payload: SpanConfig) -> Optional[SpanConfig]:
     if not ObjectId.is_valid(network_id):
         return None
-    # Use the alias 'span_config' directly since it's the field name in NetworkInDB
     update_data = payload.model_dump(exclude_unset=True)
-    result = await update_global_setting(db, network_id, "span_config", update_data)
-    return Span(**result) if result else None
+    result = await update_global_setting(db, network_id, "Span", update_data)
+    return SpanConfig(**result) if result else None
 
 
 async def update_global_setting(db: AsyncIOMotorDatabase, network_id: str, setting_path: str,
@@ -331,10 +328,10 @@ async def update_global_setting(db: AsyncIOMotorDatabase, network_id: str, setti
     if result:
         # Access the updated sub-document using setting_path
         # Convert it back to Pydantic model for type safety and validation
-        if setting_path == "si_config":
-            return SI(**result.get(setting_path, {})).model_dump()
-        elif setting_path == "span_config":
-            return Span(**result.get(setting_path, {})).model_dump()
+        if setting_path == "SI":
+            return SIConfig(**result.get(setting_path, {})).model_dump()
+        elif setting_path == "Span":
+            return SpanConfig(**result.get(setting_path, {})).model_dump()
         elif setting_path == "simulation_config":
             return SimulationConfig(**result.get(setting_path, {})).model_dump()
     return None
@@ -392,8 +389,8 @@ async def create_network_from_import(db: AsyncIOMotorDatabase, import_data: Netw
         "elements": [el.model_dump() for el in elements_in_db],
         "connections": [conn.model_dump() for conn in connections_in_db],
         "services": [s.model_dump() for s in services_in_db],
-        "si_config": import_data.SI.model_dump(),  # Use si_config for internal storage
-        "span_config": import_data.Span.model_dump(),  # Use span_config for internal storage
+        "SI": import_data.SI.model_dump(),  # Use si_config for internal storage
+        "Span": import_data.Span.model_dump(),  # Use span_config for internal storage
         "simulation_config": import_data.simulation_config.model_dump(),
     }
 

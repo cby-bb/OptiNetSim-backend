@@ -5,7 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from ....core.database import get_database
 from ....crud import crud_network
-from ....models.network import SI, Span, SimulationConfig
+from ....models.network import SIConfig, SpanConfig, SimulationConfig
 
 router = APIRouter()
 
@@ -35,12 +35,12 @@ async def update_network_simulation_config(
 
 @router.patch(
     "/spectrum-information",
-    response_model=SI,
+    response_model=SIConfig,
     summary="Update Network Spectrum Information (SI)"
 )
 async def update_network_si(
         network_id: str,
-        payload: SI,
+        payload: SIConfig,
         db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """
@@ -58,12 +58,12 @@ async def update_network_si(
 
 @router.patch(
     "/span-parameters",
-    response_model=Span,
+    response_model=SpanConfig,
     summary="Update Network Span Parameters"
 )
 async def update_network_span(
         network_id: str,
-        payload: Span,
+        payload: SpanConfig,
         db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """

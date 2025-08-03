@@ -33,7 +33,7 @@ class SimulationConfig(BaseModel):
     nli_params: NliParams = Field(default_factory=NliParams)
 
 
-class SI(BaseModel):
+class SIConfig(BaseModel):
     f_min: float = 190.3e12
     baud_rate: float = 3.57e9
     f_max: float = 196.1e12
@@ -45,7 +45,7 @@ class SI(BaseModel):
     sys_margins: int = 2
 
 
-class Span(BaseModel):
+class SpanConfig(BaseModel):
     power_mode: bool = True
     delta_power_range_db: List[int] = Field(default_factory=lambda: [0, 0, 0])
     max_fiber_lineic_loss_for_raman: float = 0.25
@@ -181,8 +181,8 @@ class NetworkInDB(NetworkBase):
     elements: List[ElementInDB] = Field(default_factory=list)
     connections: List[ConnectionInDB] = Field(default_factory=list)
     services: List[ServiceInDB] = Field(default_factory=list)
-    si_config: SI = Field(default_factory=SI, alias="SI")
-    span_config: Span = Field(default_factory=Span, alias="Span")
+    SI: SIConfig = Field(default_factory=SIConfig, alias="SI")
+    Span: SpanConfig = Field(default_factory=SpanConfig, alias="Span")
     simulation_config: SimulationConfig = Field(default_factory=SimulationConfig)
 
     model_config = {
@@ -208,8 +208,8 @@ class NetworkDetailResponse(NetworkResponse):
     elements: List[ElementInDB]
     connections: List[ConnectionInDB]
     services: List[ServiceInDB]
-    si_config: SI
-    span_config: Span
+    SI: SIConfig
+    Span: SpanConfig
     simulation_config: SimulationConfig
 
     model_config = {
@@ -225,8 +225,8 @@ class NetworkImport(BaseModel):
     elements: List[ElementCreate] = Field(default_factory=list)
     connections: List[ConnectionCreate] = Field(default_factory=list)
     services: List[ServiceCreate] = Field(default_factory=list)
-    si_config: SI = Field(default_factory=SI, alias="SI")
-    span_config: Span = Field(default_factory=Span, alias="Span")
+    SI: SIConfig = Field(default_factory=SIConfig, alias="SI")
+    Span: SpanConfig = Field(default_factory=SpanConfig, alias="Span")
     simulation_config: SimulationConfig = Field(default_factory=SimulationConfig)
 
 

@@ -18,12 +18,12 @@ The project follows a modular structure to separate concerns:
 optical-network-api/
 ├── .env                  # Environment variables
 ├── pyproject.toml        # Project dependencies (for uv)
+├── main.py               # FastAPI application entrypoint
 ├── README.md             # This file
-└── optical_network_manager/
+└── app/
     ├── api/                # API routers and endpoints
     ├── core/               # Core configuration and DB connection
     ├── crud/               # Database interaction logic
-    ├── main.py             # FastAPI application entrypoint
     └── models/             # Pydantic data models
 ```
 

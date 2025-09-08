@@ -109,6 +109,7 @@ class ElementUpdate(BaseModel):
     type: Optional[Literal["Transceiver", "Edfa", "Roadm", "Fiber", "Fused"]] = None
     type_variety: Optional[str] = None
     params: Optional[Dict[str, Any]] = None
+    operational: Dict[str, Any] = Field(default_factory=dict)
     metadata: Optional[Dict[str, Any]] = None
 
 

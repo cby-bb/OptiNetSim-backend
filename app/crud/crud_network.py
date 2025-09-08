@@ -432,6 +432,7 @@ async def insert_sub_topology(db: AsyncIOMotorDatabase, network_id: str, sub_top
             type=el_create.type,
             type_variety=el_create.type_variety,
             params=el_create.params,
+            operational=el_create.operational,
             metadata=el_create.metadata
         ))
 

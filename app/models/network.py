@@ -95,11 +95,13 @@ class ElementCreate(ElementBase):
     # It will be replaced by a newly generated UUID6 upon storage in DB.
     element_id: Optional[str] = None  # <-- 新增或修改此行
     params: Dict[str, Any] = Field(default_factory=dict)
+    operational: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ElementInDB(ElementBase):
     element_id: str = Field(default_factory=lambda: str(uuid6()))
     params: Dict[str, Any] = Field(default_factory=dict)
+    operational: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ElementUpdate(BaseModel):

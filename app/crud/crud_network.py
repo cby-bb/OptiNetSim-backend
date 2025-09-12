@@ -8,7 +8,7 @@ from pydantic import ValidationError  # 导入 ValidationError
 from uuid6 import uuid6
 
 from ..models.network import (
-    NetworkCreate, NetworkInDB, NetworkUpdate, ElementCreate, ElementInDB,
+    NetworkCreate, NetworkInDB, NetworkUpdate, AnyElementCreate, AnyElementInDB,
     ElementUpdate, ConnectionCreate, ConnectionInDB, ServiceCreate, ServiceInDB, ServiceUpdate,
     NetworkImport, SubTopologyImport,
     SIConfig, SpanConfig, SimulationConfig  # 导入全局配置模型
@@ -87,7 +87,7 @@ async def delete_network(db: AsyncIOMotorDatabase, network_id: str) -> bool:
 
 # --- Topology Element (Node) CRUD ---
 
-async def get_element_from_network(db: AsyncIOMotorDatabase, network_id: str, element_id: str) -> Optional[ElementInDB]:
+async def get_element_from_network(db: AsyncIOMotorDatabase, network_id: str, element_id: str) -> Optional[AnyElementInDB]:
     network = await get_network(db, network_id)
     if not network:
         return None
@@ -97,12 +97,12 @@ async def get_element_from_network(db: AsyncIOMotorDatabase, network_id: str, el
     return None
 
 
-async def add_element_to_network(db: AsyncIOMotorDatabase, network_id: str, element: ElementCreate) \
-        -> Optional[ElementInDB]:
+async def add_element_to_network(db: AsyncIOMotorDatabase, network_id: str, element: AnyElementCreate) \
+        -> Optional[AnyElementInDB]:
     if not ObjectId.is_valid(network_id):
         return None
 
-    new_element = ElementInDB(**element.model_dump(exclude_unset=True, exclude={"element_id"}))  # 生成新的 element_id
+    new_element = AnyElementInDB(**element.model_dump(exclude_unset=True, exclude={"element_id"}))  # 生成新的 element_id
     result = await db[COLLECTION].update_one(
         {"_id": ObjectId(network_id)},
         {
@@ -114,7 +114,7 @@ async def add_element_to_network(db: AsyncIOMotorDatabase, network_id: str, elem
 
 
 async def update_element_in_network(db: AsyncIOMotorDatabase, network_id: str, element_id: str,
-                                    payload: ElementUpdate) -> Optional[ElementInDB]:
+                                    payload: ElementUpdate) -> Optional[AnyElementInDB]:
     if not ObjectId.is_valid(network_id):
         return None
 
@@ -349,7 +349,7 @@ async def create_network_from_import(db: AsyncIOMotorDatabase, import_data: Netw
         if el_create.element_id:
             element_id_map[el_create.element_id] = new_element_id
         # Create ElementInDB using the new generated ID
-        elements_in_db.append(ElementInDB(
+        elements_in_db.append(AnyElementInDB(
             element_id=new_element_id,
             name=el_create.name,
             type=el_create.type,
@@ -367,9 +367,9 @@ async def create_network_from_import(db: AsyncIOMotorDatabase, import_data: Netw
         to_node_resolved = element_id_map.get(conn_create.to_node, conn_create.to_node)
 
         # Basic validation: ensure resolved IDs are valid UUIDs if they were mapped
-        if (conn_create.from_node in element_id_map and not ElementInDB.model_validate(
+        if (conn_create.from_node in element_id_map and not AnyElementInDB.model_validate(
                 {"element_id": from_node_resolved, "name": "temp", "type": "Fiber"})) or \
-                (conn_create.to_node in element_id_map and not ElementInDB.model_validate(
+                (conn_create.to_node in element_id_map and not AnyElementInDB.model_validate(
                     {"element_id": to_node_resolved, "name": "temp", "type": "Fiber"})):
             raise ValueError(
                 f"Invalid node ID reference found during connection import: from_node={conn_create.from_node}, to_node={conn_create.to_node}")
@@ -426,7 +426,7 @@ async def insert_sub_topology(db: AsyncIOMotorDatabase, network_id: str, sub_top
             element_id_map[original_element_id] = new_element_id
 
         # Create ElementInDB with the newly generated ID
-        new_elements_for_db.append(ElementInDB(
+        new_elements_for_db.append(AnyElementInDB(
             element_id=new_element_id,
             name=el_create.name,
             type=el_create.type,

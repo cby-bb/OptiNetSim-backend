@@ -5,25 +5,22 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from ....core.database import get_database
 from ....crud import crud_network
-from ....models.network import ElementCreate, ElementInDB, ElementUpdate
+from ....models.network import AnyElementCreate, AnyElementInDB, ElementUpdate
 
 router = APIRouter()
 
 
 @router.post(
     "",
-    response_model=ElementInDB,
+    response_model=AnyElementInDB,
     status_code=status.HTTP_201_CREATED,
     summary="Add a Topology Element to a Network"
 )
 async def add_element(
         network_id: str,
-        element_in: ElementCreate,
+        element_in: AnyElementCreate = Field(..., discriminator="type"),
         db: AsyncIOMotorDatabase = Depends(get_database)
 ):
-    """
-    Adds a new topology element (e.g., Transceiver, Fiber) to the specified optical network.
-    """
     db_element = await crud_network.add_element_to_network(db, network_id, element_in)
     if db_element is None:
         raise HTTPException(
@@ -35,7 +32,7 @@ async def add_element(
 
 @router.get(
     "/{element_id}",
-    response_model=ElementInDB,
+    response_model=AnyElementInDB,
     summary="Get a specific Topology Element by ID"
 )
 async def get_element(
@@ -66,7 +63,7 @@ async def get_element(
 
 @router.patch(
     "/{element_id}",
-    response_model=ElementInDB,
+    response_model=AnyElementInDB,
     summary="Update a Topology Element"
 )
 async def update_element(

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from bson import ObjectId
-from pydantic import BaseModel, Field, ValidationError  # 导入 ValidationError
+from pydantic import BaseModel, Field, model_validator, ValidationError
 from uuid6 import uuid6
 
 
@@ -60,10 +60,14 @@ class SpanConfig(BaseModel):
 
 
 # --- Element Models ---
-
 class ElementParamsBase(BaseModel):
     pass
 
+class TransceiverParams(ElementParamsBase):
+    pass # Add specific params if needed
+
+class FusedParams(ElementParamsBase):
+    pass # Add specific params if needed
 
 class FiberParams(ElementParamsBase):
     length: float = 80.0
@@ -72,49 +76,108 @@ class FiberParams(ElementParamsBase):
     att_in: float = 0.0
 
 
+class RamanFiberParams(FiberParams):
+    raman_efficiency: float = 4.5e-4
+    noise_figure: Optional[float] = 4.5
+
 class RoadmParams(ElementParamsBase):
     target_pch_out_db: Optional[float] = None
     restrictions: Dict[str, Any] = Field(default_factory=dict)
 
-
-class EdfaOperational(BaseModel):
+class EdfaParams(ElementParamsBase):
     gain_target: Optional[float] = None
     tilt_target: Optional[float] = None
 
 
-# Base Element Model
+# --- Base Element Model ---
 class ElementBase(BaseModel):
     name: str
-    type: Literal["Transceiver", "Edfa", "Roadm", "Fiber", "Fused"]
+    type: Literal["Transceiver", "Edfa", "Roadm", "Fiber", "Fused", "RamanFiber"]
     type_variety: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
-
-
-class ElementCreate(ElementBase):
-    # element_id is used for temporary linking during import/sub-topology insertion
-    # It will be replaced by a newly generated UUID6 upon storage in DB.
-    element_id: Optional[str] = None  # <-- 新增或修改此行
-    params: Dict[str, Any] = Field(default_factory=dict)
     operational: Dict[str, Any] = Field(default_factory=dict)
 
 
-class ElementInDB(ElementBase):
+# --- Concrete Element Models for Validation ---
+class ElementCreateBase(ElementBase):
+    element_id: Optional[str] = None # For import linking
+
+class ElementInDBBase(ElementBase):
     element_id: str = Field(default_factory=lambda: str(uuid6()))
-    params: Dict[str, Any] = Field(default_factory=dict)
-    operational: Dict[str, Any] = Field(default_factory=dict)
 
+# Specific Element types for CREATE
+class TransceiverCreate(ElementCreateBase):
+    type: Literal["Transceiver"] = "Transceiver"
+    params: TransceiverParams = Field(default_factory=TransceiverParams)
+
+class EdfaCreate(ElementCreateBase):
+    type: Literal["Edfa"] = "Edfa"
+    params: EdfaParams = Field(default_factory=EdfaParams)
+
+class RoadmCreate(ElementCreateBase):
+    type: Literal["Roadm"] = "Roadm"
+    params: RoadmParams = Field(default_factory=RoadmParams)
+
+class FiberCreate(ElementCreateBase):
+    type: Literal["Fiber"] = "Fiber"
+    params: FiberParams = Field(default_factory=FiberParams)
+
+class FusedCreate(ElementCreateBase):
+    type: Literal["Fused"] = "Fused"
+    params: FusedParams = Field(default_factory=FusedParams)
+
+class RamanFiberCreate(ElementCreateBase):
+    type: Literal["RamanFiber"] = "RamanFiber"
+    params: RamanFiberParams = Field(default_factory=RamanFiberParams)
+
+
+# Specific Element types for IN_DB
+class TransceiverInDB(ElementInDBBase):
+    type: Literal["Transceiver"] = "Transceiver"
+    params: TransceiverParams = Field(default_factory=TransceiverParams)
+
+class EdfaInDB(ElementInDBBase):
+    type: Literal["Edfa"] = "Edfa"
+    params: EdfaParams = Field(default_factory=EdfaParams)
+
+class RoadmInDB(ElementInDBBase):
+    type: Literal["Roadm"] = "Roadm"
+    params: RoadmParams = Field(default_factory=RoadmParams)
+
+class FiberInDB(ElementInDBBase):
+    type: Literal["Fiber"] = "Fiber"
+    params: FiberParams = Field(default_factory=FiberParams)
+
+class FusedInDB(ElementInDBBase):
+    type: Literal["Fused"] = "Fused"
+    params: FusedParams = Field(default_factory=FusedParams)
+
+class RamanFiberInDB(ElementInDBBase):
+    type: Literal["RamanFiber"] = "RamanFiber"
+    params: RamanFiberParams = Field(default_factory=RamanFiberParams)
+
+
+# --- Discriminated Unions ---
+
+AnyElementCreate = Union[
+    TransceiverCreate, EdfaCreate, RoadmCreate, FiberCreate, FusedCreate, RamanFiberCreate
+]
+
+AnyElementInDB = Union[
+    TransceiverInDB, EdfaInDB, RoadmInDB, FiberInDB, FusedInDB, RamanFiberInDB
+]
 
 class ElementUpdate(BaseModel):
     name: Optional[str] = None
-    type: Optional[Literal["Transceiver", "Edfa", "Roadm", "Fiber", "Fused"]] = None
+    # Type cannot be updated via PATCH to avoid complexity with params validation
+    # type: Optional[Literal["Transceiver", "Edfa", "Roadm", "Fiber", "Fused", "RamanFiber"]] = None
     type_variety: Optional[str] = None
-    params: Optional[Dict[str, Any]] = None
-    operational: Dict[str, Any] = Field(default_factory=dict)
+    params: Optional[Dict[str, Any]] = None # Kept as dict for flexibility in PATCH
+    operational: Optional[Dict[str, Any]] = None
     metadata: Optional[Dict[str, Any]] = None
 
 
 # --- Connection Models ---
-
 class ConnectionBase(BaseModel):
     from_node: str
     to_node: str
@@ -129,7 +192,6 @@ class ConnectionInDB(ConnectionBase):
 
 
 # --- Service Models ---
-
 class ServiceRequirements(BaseModel):
     bandwidth: float
     latency: float
@@ -137,8 +199,6 @@ class ServiceRequirements(BaseModel):
 
 class ServiceBase(BaseModel):
     name: str
-    # path can contain element_ids of nodes and connections, depending on implementation detail.
-    # For simplicity, let's assume it's a list of node element_ids forming a logical path.
     path: List[str]
     service_requirements: Optional[ServiceRequirements] = None
     service_constraints: Dict[str, Any] = Field(default_factory=dict)
@@ -162,7 +222,6 @@ class ServiceUpdate(BaseModel):
     service_requirements: Optional[ServiceRequirements] = None
     service_constraints: Optional[Dict[str, Any]] = None
 
-
 # --- Network Models ---
 
 class NetworkBase(BaseModel):
@@ -181,7 +240,7 @@ class NetworkInDB(NetworkBase):
     id: ObjectId = Field(default_factory=ObjectId, alias="_id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    elements: List[ElementInDB] = Field(default_factory=list)
+    elements: List[Field(AnyElementInDB, discriminator="type")] = Field(default_factory=list)
     connections: List[ConnectionInDB] = Field(default_factory=list)
     services: List[ServiceInDB] = Field(default_factory=list)
     SI: SIConfig = Field(default_factory=SIConfig, alias="SI")
@@ -208,7 +267,7 @@ class NetworkListResponse(BaseModel):
 
 
 class NetworkDetailResponse(NetworkResponse):
-    elements: List[ElementInDB]
+    elements: List[Field(AnyElementInDB, discriminator="type")]
     connections: List[ConnectionInDB]
     services: List[ServiceInDB]
     SI: SIConfig
@@ -225,7 +284,7 @@ class NetworkDetailResponse(NetworkResponse):
 
 class NetworkImport(BaseModel):
     network_name: str
-    elements: List[ElementCreate] = Field(default_factory=list)
+    elements: List[Field(AnyElementCreate, discriminator="type")] = Field(default_factory=list)
     connections: List[ConnectionCreate] = Field(default_factory=list)
     services: List[ServiceCreate] = Field(default_factory=list)
     SI: SIConfig = Field(default_factory=SIConfig, alias="SI")
@@ -234,6 +293,6 @@ class NetworkImport(BaseModel):
 
 
 class SubTopologyImport(BaseModel):
-    elements: List[ElementCreate]
+    elements: List[Field(AnyElementCreate, discriminator="type")]
     connections: List[ConnectionCreate]
     strategy: Literal["generate_new_id", "error"] = "generate_new_id"

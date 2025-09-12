@@ -18,7 +18,7 @@ router = APIRouter()
 )
 async def add_element(
         network_id: str,
-        element_in: AnyElementCreate = Field(..., discriminator="type"),
+        element_in: AnyElementCreate,
         db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     db_element = await crud_network.add_element_to_network(db, network_id, element_in)

@@ -6,7 +6,6 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from ....core.database import get_database
 from ....crud import crud_network
 from ....models.network import DiscriminatedElementCreate, DiscriminatedElementInDB, ElementUpdate
-from pydantic import Field
 
 router = APIRouter()
 
@@ -19,7 +18,7 @@ router = APIRouter()
 )
 async def add_element(
         network_id: str,
-        element_in: DiscriminatedElementCreate = Field(..., discriminator="type"),
+        element_in: DiscriminatedElementCreate = Body(...),
         db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     db_element = await crud_network.add_element_to_network(db, network_id, element_in)

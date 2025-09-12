@@ -1,7 +1,7 @@
 # app/models/network.py
 
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union,  Annotated
 
 from bson import ObjectId
 from pydantic import BaseModel, Field, model_validator, ValidationError
@@ -224,6 +224,17 @@ class ServiceUpdate(BaseModel):
 
 # --- Network Models ---
 
+
+AnyElementInDBList = Annotated[
+    List[AnyElementInDB],
+    Field(discriminator="type")
+]
+AnyElementCreateList = Annotated[
+    List[AnyElementCreate],
+    Field(discriminator="type")
+]
+
+
 class NetworkBase(BaseModel):
     network_name: str
 
@@ -240,7 +251,7 @@ class NetworkInDB(NetworkBase):
     id: ObjectId = Field(default_factory=ObjectId, alias="_id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    elements: List[AnyElementInDB] = Field(default_factory=list, discriminator="type")
+    elements: AnyElementInDBList = Field(default_factory=list)
     connections: List[ConnectionInDB] = Field(default_factory=list)
     services: List[ServiceInDB] = Field(default_factory=list)
     SI: SIConfig = Field(default_factory=SIConfig, alias="SI")
@@ -267,7 +278,7 @@ class NetworkListResponse(BaseModel):
 
 
 class NetworkDetailResponse(NetworkResponse):
-    elements: List[AnyElementInDB] = Field(discriminator="type")
+    elements: AnyElementInDBList
     connections: List[ConnectionInDB]
     services: List[ServiceInDB]
     SI: SIConfig
@@ -284,7 +295,7 @@ class NetworkDetailResponse(NetworkResponse):
 
 class NetworkImport(BaseModel):
     network_name: str
-    elements: List[AnyElementCreate] = Field(default_factory=list, discriminator="type")
+    elements: AnyElementCreateList = Field(default_factory=list)
     connections: List[ConnectionCreate] = Field(default_factory=list)
     services: List[ServiceCreate] = Field(default_factory=list)
     SI: SIConfig = Field(default_factory=SIConfig, alias="SI")
@@ -293,6 +304,6 @@ class NetworkImport(BaseModel):
 
 
 class SubTopologyImport(BaseModel):
-    elements: List[AnyElementCreate] = Field(discriminator="type")
+    elements: AnyElementCreateList
     connections: List[ConnectionCreate]
     strategy: Literal["generate_new_id", "error"] = "generate_new_id"

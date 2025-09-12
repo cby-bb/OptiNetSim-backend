@@ -225,12 +225,13 @@ class ServiceUpdate(BaseModel):
 # --- Network Models ---
 
 
-AnyElementInDBList = Annotated[
-    List[AnyElementInDB],
+DiscriminatedElementCreate = Annotated[
+    AnyElementCreate,
     Field(discriminator="type")
 ]
-AnyElementCreateList = Annotated[
-    List[AnyElementCreate],
+
+DiscriminatedElementInDB = Annotated[
+    AnyElementInDB,
     Field(discriminator="type")
 ]
 
@@ -251,7 +252,7 @@ class NetworkInDB(NetworkBase):
     id: ObjectId = Field(default_factory=ObjectId, alias="_id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    elements: AnyElementInDBList = Field(default_factory=list)
+    elements: List[DiscriminatedElementInDB] = Field(default_factory=list)
     connections: List[ConnectionInDB] = Field(default_factory=list)
     services: List[ServiceInDB] = Field(default_factory=list)
     SI: SIConfig = Field(default_factory=SIConfig, alias="SI")
@@ -278,7 +279,7 @@ class NetworkListResponse(BaseModel):
 
 
 class NetworkDetailResponse(NetworkResponse):
-    elements: AnyElementInDBList
+    elements: List[DiscriminatedElementInDB]
     connections: List[ConnectionInDB]
     services: List[ServiceInDB]
     SI: SIConfig
@@ -295,7 +296,7 @@ class NetworkDetailResponse(NetworkResponse):
 
 class NetworkImport(BaseModel):
     network_name: str
-    elements: AnyElementCreateList = Field(default_factory=list)
+    elements: List[DiscriminatedElementCreate] = Field(default_factory=list)
     connections: List[ConnectionCreate] = Field(default_factory=list)
     services: List[ServiceCreate] = Field(default_factory=list)
     SI: SIConfig = Field(default_factory=SIConfig, alias="SI")
@@ -304,6 +305,6 @@ class NetworkImport(BaseModel):
 
 
 class SubTopologyImport(BaseModel):
-    elements: AnyElementCreateList
+    elements: List[DiscriminatedElementCreate]
     connections: List[ConnectionCreate]
     strategy: Literal["generate_new_id", "error"] = "generate_new_id"

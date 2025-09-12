@@ -1,11 +1,11 @@
 # app/api/v1/endpoints/elements.py
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from ....core.database import get_database
 from ....crud import crud_network
-from ....models.network import AnyElementCreate, AnyElementInDB, ElementUpdate
+from ....models.network import DiscriminatedElementCreate, DiscriminatedElementInDB, ElementUpdate
 from pydantic import Field
 
 router = APIRouter()
@@ -13,13 +13,13 @@ router = APIRouter()
 
 @router.post(
     "",
-    response_model=AnyElementInDB,
+    response_model=DiscriminatedElementInDB,
     status_code=status.HTTP_201_CREATED,
     summary="Add a Topology Element to a Network"
 )
 async def add_element(
         network_id: str,
-        element_in: AnyElementCreate = Field(..., discriminator="type"),
+        element_in: DiscriminatedElementCreate = Field(..., discriminator="type"),
         db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     db_element = await crud_network.add_element_to_network(db, network_id, element_in)
@@ -33,7 +33,7 @@ async def add_element(
 
 @router.get(
     "/{element_id}",
-    response_model=AnyElementInDB,
+    response_model=DiscriminatedElementInDB,
     summary="Get a specific Topology Element by ID"
 )
 async def get_element(
@@ -64,7 +64,7 @@ async def get_element(
 
 @router.patch(
     "/{element_id}",
-    response_model=AnyElementInDB,
+    response_model=DiscriminatedElementInDB,
     summary="Update a Topology Element"
 )
 async def update_element(

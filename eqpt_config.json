@@ -8,5 +8,27 @@
       "nf_min": 5.5,
       "nf_max": 10
     }
+  ],
+  "Fiber": [
+    {
+      "type_variety": "SSMF",
+      "params": {
+        "ref_wavelength": 1550e-9,
+        "length": 80,
+        "loss_coef": 0.2,
+        "dispersion": 1.67e-05,
+        "gamma": 0.00127
+      }
+    }
+  ],
+  "Transceiver": [
+    {
+      "type_variety": "default"
+    }
+  ],
+  "Roadm": [
+    {
+      "type_variety": "default"
+    }
   ]
 }

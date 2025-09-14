@@ -2,24 +2,11 @@
   "Edfa": [
     {
       "type_variety": "default",
-      "gain_flatmax": 35,
+      "gain_flatmax": 25,
       "gain_min": 15,
       "p_max": 23,
-      "nf_min": 4.5,
-      "nf_max": 9,
-      "nf_model": {
-        "__class__": "gnpy.core.science_utils.nf_model_from_params",
-        "comment": "formula from 'oiseau' OLS design tool",
-        "params": [
-          10.5,
-          -0.3
-        ]
-      },
-      "operational": {
-        "gain_target": 20,
-        "att_in": 0,
-        "tilt_target": 0
-      }
+      "nf_min": 5.5,
+      "nf_max": 10
     }
   ]
 }

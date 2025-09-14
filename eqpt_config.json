@@ -12,34 +12,28 @@
   "Fiber": [
     {
       "type_variety": "SSMF",
-      "params": {
-        "ref_wavelength": 1550e-9,
-        "length": 80,
-        "loss_coef": 0.2,
-        "dispersion": 1.67e-05,
-        "gamma": 0.00127,
-        "pmd_coef": 0
-      }
+      "ref_wavelength": 1550e-9,
+      "length": 80,
+      "loss_coef": 0.2,
+      "dispersion": 1.67e-05,
+      "gamma": 0.00127,
+      "pmd_coef": 0
     }
   ],
   "Transceiver": [
     {
       "type_variety": "default",
-      "params": {
-        "mode": [{
-          "format": "QPSK",
-          "baud_rate": 32e9
-        }]
-      }
+      "mode": [{
+        "format": "QPSK",
+        "baud_rate": 32e9
+      }]
     }
   ],
   "Roadm": [
     {
       "type_variety": "default",
-      "params": {
-        "equalization": {
-          "type": "ideal"
-        }
+      "equalization": {
+        "type": "ideal"
       }
     }
   ]

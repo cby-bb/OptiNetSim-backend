@@ -43,7 +43,7 @@
       "amplifier": "default",
       "con_in": 0.5,
       "con_out": 0.5,
-      "delta_power_range_db": [0]
+      "delta_power_range_db": [0, 0, 0.1]
     }
   ]
 }

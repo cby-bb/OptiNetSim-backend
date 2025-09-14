@@ -2,7 +2,6 @@
 
 import math
 import traceback
-import json
 from pathlib import Path
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -24,7 +23,7 @@ class SimulationError(Exception):
         super().__init__(self.message)
 
 
-# 定义两个配置文件的路径
+# 两个配置文件的路径保持不变
 EQPT_CONFIG_PATH = Path(__file__).parent.parent.parent / "eqpt_config.json"
 SI_CONFIG_PATH = Path(__file__).parent.parent.parent / "si_config.json"
 
@@ -38,35 +37,31 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
     gnpy_network_json = convert_to_gnpy_json(network_model, request.path)
 
     try:
-        # --- 核心修改：分步加载并合并配置 ---
-        # 1. 加载纯净的设备配置，这一步不会再出错
+        # --- 核心修改：使用 gnpy 的函数加载所有配置 ---
+        # 1. 加载纯净的设备配置，返回包含 gnpy 内部对象的字典
         equipment = load_equipment(str(EQPT_CONFIG_PATH))
 
-        # 2. 手动加载 SI 配置文件
-        with open(SI_CONFIG_PATH, 'r', encoding='utf-8') as f:
-            si_data = json.load(f)
+        # 2. 同样使用 load_equipment 加载 SI 配置文件，以创建正确的 gnpy 对象
+        si_equipment_part = load_equipment(str(SI_CONFIG_PATH))
 
-        # 3. 将 SI 数据合并到 equipment 字典中
-        equipment.update(si_data)
+        # 3. 将包含正确对象的 SI 数据合并到 equipment 字典中
+        equipment.update(si_equipment_part)
         # --- 核心修改结束 ---
 
-        # 现在, equipment 字典同时满足 load_equipment 和 build_network 的要求
-        # 它包含了 Span (build_network 需要) 和 SI (build_network 需要),
-        # 并且是在 load_equipment 成功运行后才加入的 SI。
-
         network = network_from_json(gnpy_network_json, equipment)
-        build_network(network, equipment, 0, 0)  # 这一步现在可以成功了
+        build_network(network, equipment, 0, 0)  # 这一步现在一定会成功
 
-        # 从合并后的 equipment 对象中安全地读取 si_config
+        # 从合并后的 equipment 对象中读取 si_config，它现在是对象而不是字典
         si_config = equipment['SI']['default']
 
+        # --- 核心修改 #2: 使用属性访问(.)而不是键访问([]) ---
         spectral_info = create_input_spectral_information(
-            f_min=si_config['f_min'],
-            f_max=si_config['f_min'] + (si_config['n_ch'] - 1) * si_config['spacing'],
-            spacing=si_config['spacing'],
-            baud_rate=si_config['baud_rate'],
-            roll_off=si_config['roll_off'],
-            tx_osnr=si_config['tx_osnr'],
+            f_min=si_config.f_min,
+            f_max=si_config.f_min + (si_config.n_ch - 1) * si_config.spacing,
+            spacing=si_config.spacing,
+            baud_rate=si_config.baud_rate,
+            roll_off=si_config.roll_off,
+            tx_osnr=si_config.tx_osnr,
             tx_power=request.input_power_dbm
         )
 
@@ -90,7 +85,7 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
                                   status_code=400)
 
         tx_output_power_dbm = request.input_power_dbm
-        tx_output_osnr = si_config['tx_osnr']
+        tx_output_osnr = si_config.tx_osnr  # 使用属性访问
 
         tx_latency = getattr(transmitter, 'latency', None)
         tx_latency_ms = tx_latency * 1000 if tx_latency is not None else 0
@@ -144,7 +139,6 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
         if not path_results:
             raise SimulationError("Simulation failed to produce results.", status_code=500)
 
-        # 注意: gnpy 0.8+ 版本返回的是对象而不是字典
         final_osnr = path_results[-1].output_osnr_db if path_results else None
         final_power = path_results[-1].output_power_dbm if path_results else None
 
@@ -159,3 +153,4 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
         traceback.print_exc()
         print("---------------------------------------------------------")
         raise SimulationError(f"GNPy simulation engine error: {str(e)}", status_code=500)
+

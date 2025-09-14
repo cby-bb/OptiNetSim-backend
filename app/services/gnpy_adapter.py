@@ -49,7 +49,10 @@ def convert_to_gnpy_json(network: NetworkInDB, path: List[str]) -> Dict[str, Any
                 "att_in": 0,
                 "con_in": 0.5,  # Default connector loss
                 "con_out": 0.5,
-                "type_variety": "SSMF"  # Assume Standard Single-Mode Fiber
+                "type_variety": "SSMF",  # Assume Standard Single-Mode Fiber
+                "loss_coef": "element.params.loss_coef",
+                "dispersion":"element.params.dispersion",
+                "gamma":"element.params.gamma"
             }
 
         elif element.type == "Edfa":

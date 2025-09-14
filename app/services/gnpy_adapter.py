@@ -45,6 +45,7 @@ def convert_to_gnpy_json(network: NetworkInDB, path: List[str]) -> Dict[str, Any
             gnpy_el["type"] = "Fiber"
             gnpy_el["params"] = {
                 "length": element.params.length,
+                "length_units": 'km',
                 "att_in": 0,
                 "con_in": 0.5,  # Default connector loss
                 "con_out": 0.5,

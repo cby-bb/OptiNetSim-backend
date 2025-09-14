@@ -1,5 +1,7 @@
 from typing import List, Dict, Any
 from ..models.network import NetworkInDB, DiscriminatedElementInDB
+from fastapi import HTTPException  # <--- 导入 HTTPException
+from starlette import status       # <--- 导入 status
 
 
 def convert_to_gnpy_json(network: NetworkInDB, path: List[str]) -> Dict[str, Any]:
@@ -11,6 +13,13 @@ def convert_to_gnpy_json(network: NetworkInDB, path: List[str]) -> Dict[str, Any
     # Filter only the elements in the specified path
     path_elements = [el for el in network.elements if el.element_id in path]
     # Maintain the order specified in the path
+    if len(path_elements) != len(path):
+        found_ids = {el.element_id for el in path_elements}
+        missing_ids = [pid for pid in path if pid not in found_ids]
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"The following element_ids from the path were not found in the network: {missing_ids}"
+        )
     ordered_path_elements = sorted(path_elements, key=lambda el: path.index(el.element_id))
 
     for element in ordered_path_elements:

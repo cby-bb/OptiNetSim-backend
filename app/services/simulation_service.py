@@ -8,10 +8,10 @@ from ..models.simulation import SingleLinkSimulationRequest, SingleLinkSimulatio
 from .gnpy_adapter import convert_to_gnpy_json
 
 # --- GNPy Imports ---
-from gnpy.core.equipment import load_equipment
+from gnpy.tools.json_io import load_equipment
 from gnpy.core.network import build_network
 from gnpy.core.info import create_input_spectral_information, SpectralInformation
-from gnpy.core.utils import db_to_lin
+from gnpy.core.utils import db2lin
 from gnpy.tools.json_io import network_from_json
 
 
@@ -53,11 +53,11 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
             power=request.input_power_dbm, spacing=50e9, grid_type='flex'
         )
         # Select the first channel for simulation
-        power_lin = db_to_lin(request.input_power_dbm) / 1000  # convert dBm to W
+        power_lin = db2lin(request.input_power_dbm) / 1000  # convert dBm to W
         initial_channel = SpectralInformation(
             frequency=si.frequency[0],
             slot_width=si.slot_width[0],
-            signal=power_lin,
+            #signal=power_lin,
             nli=0,
             ase=0,
             baud_rate=si.baud_rate[0],

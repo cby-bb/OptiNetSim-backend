@@ -2,7 +2,7 @@ import math
 import json
 from pathlib import Path
 
-from motor.motor_asyncio import AsyncIomotorDatabase
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from ..crud import crud_network
 from ..models.simulation import SingleLinkSimulationRequest, SingleLinkSimulationResponse, SimulationStepResult
 from .gnpy_adapter import convert_to_gnpy_json
@@ -27,7 +27,7 @@ class SimulationError(Exception):
 EQPT_CONFIG_PATH = Path(__file__).parent.parent.parent / "eqpt_config.json"
 
 
-async def simulate_single_link_gnpy(db: AsyncIomotorDatabase,
+async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
                                     request: SingleLinkSimulationRequest) -> SingleLinkSimulationResponse:
     """
     Performs an optical transmission simulation using the GNPy library.

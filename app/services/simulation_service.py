@@ -1,4 +1,4 @@
-# -------------------- 请用这个最终的、与 gnpy==2.12.1 兼容的完整文件内容替换 --------------------
+# -------------------- 请用这份最终的、修正了 NoneType 错误的完整文件内容替换 --------------------
 
 import math
 import traceback
@@ -9,10 +9,10 @@ from ..crud import crud_network
 from ..models.simulation import SingleLinkSimulationRequest, SingleLinkSimulationResponse, SimulationStepResult
 from .gnpy_adapter import convert_to_gnpy_json
 
-# --- GNPy Imports (Corrected and Verified for version 2.12.1) ---
 from gnpy.tools.json_io import load_equipment, network_from_json
 from gnpy.core.network import build_network
 from gnpy.core.info import create_input_spectral_information
+from gnpy.core.elements import Transceiver
 from gnpy.core.utils import lin2db
 
 
@@ -28,9 +28,6 @@ EQPT_CONFIG_PATH = Path(__file__).parent.parent.parent / "eqpt_config.json"
 
 async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
                                     request: SingleLinkSimulationRequest) -> SingleLinkSimulationResponse:
-    """
-    Performs an optical transmission simulation using the GNPy library version 2.12.1.
-    """
     network_model = await crud_network.get_network(db, request.network_id)
     if not network_model:
         raise SimulationError(f"Network with id {request.network_id} not found.", status_code=404)
@@ -43,14 +40,12 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
         build_network(network, equipment, 0, 0)
 
         si_config = equipment['SI']['default']
-        initial_spectral_info = create_input_spectral_information(
+        spectral_info = create_input_spectral_information(
             f_min=si_config.f_min, f_max=si_config.f_max, spacing=si_config.spacing,
              baud_rate=si_config.baud_rate, roll_off=si_config.roll_off,
             tx_osnr=si_config.tx_osnr, tx_power=request.input_power_dbm
         )
 
-        # --- 核心修复 #1: 获取路径上真实的 "元素对象" 列表 ---
-        # We need to get the actual node objects from the network graph in the correct order.
         node_map = {n.uid: n for n in network.nodes()}
         path_elements = []
         for uid in request.path:
@@ -59,40 +54,60 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
                 raise SimulationError(f"Element with UID '{uid}' from path not found in the network.", status_code=404)
             path_elements.append(element)
 
+        if not path_elements:
+            raise SimulationError("Simulation path is empty.", status_code=400)
+
         path_results = []
-        # The spectral_info object will be mutated by each element's propagate method
-        spectral_info = initial_spectral_info.copy()
-        channel_index = 0  # Assuming we are interested in the first channel
+        channel_index = 0
 
-        # --- 核心修复 #2: 遍历元素并调用每个元素的 .propagate() 方法 ---
-        for element in path_elements:
-            # Capture state *before* propagation (input to the element)
-            si_in = spectral_info.copy()
+        transmitter = path_elements[0]
+        if not isinstance(transmitter, Transceiver):
+            raise SimulationError(f"Path must start with a Transceiver, but started with {type(transmitter).__name__}.",
+                                  status_code=400)
 
-            # The .propagate method modifies the spectral_info object in-place
+        tx_output_power_dbm = request.input_power_dbm
+        tx_output_osnr = si_config.tx_osnr if si_config.tx_osnr else float('inf')
+
+        # --- 核心修复 #1: 检查 latency 属性值不为 None ---
+        tx_latency = getattr(transmitter, 'latency', None)
+        tx_latency_ms = tx_latency * 1000 if tx_latency is not None else 0
+
+        path_results.append(SimulationStepResult(
+            element_id=transmitter.uid,
+            element_type=type(transmitter).__name__,
+            input_power_dbm=None,
+            input_osnr_db=None,
+            output_power_dbm=tx_output_power_dbm,
+            output_osnr_db=tx_output_osnr,
+            added_noise_mw=0,
+            details={"latency_ms": tx_latency_ms}
+        ))
+
+        for element in path_elements[1:]:
+            if isinstance(element, Transceiver):
+                break
+
+            input_power_watts = spectral_info.signal[channel_index]
+            input_ase_watts = spectral_info.ase[channel_index]
+            input_nli_watts = spectral_info.nli[channel_index]
+            input_total_noise = input_ase_watts + input_nli_watts
+            input_power_dbm = 10 * math.log10(input_power_watts * 1000)
+            input_osnr_db = lin2db(input_power_watts / input_total_noise) if input_total_noise > 0 else float('inf')
+
             element.propagate(spectral_info)
 
-            # Now, spectral_info represents the state *after* propagation (output of the element)
-            si_out = spectral_info
-
-            # Extract metrics from spectral info before and after
-            input_power_watts = si_in.signal[channel_index]
-            output_power_watts = si_out.signal[channel_index]
-            input_ase_watts = si_in.ase[channel_index]
-            output_ase_watts = si_out.ase[channel_index]
-            input_nli_watts = si_in.nli[channel_index]
-            output_nli_watts = si_out.nli[channel_index]
-
-            input_power_dbm = 10 * math.log10(input_power_watts * 1000)
-            output_power_dbm = 10 * math.log10(output_power_watts * 1000)
-
-            input_total_noise = input_ase_watts + input_nli_watts
+            output_power_watts = spectral_info.signal[channel_index]
+            output_ase_watts = spectral_info.ase[channel_index]
+            output_nli_watts = spectral_info.nli[channel_index]
             output_total_noise = output_ase_watts + output_nli_watts
-
-            input_osnr_db = lin2db(input_power_watts / input_total_noise) if input_total_noise > 0 else float('inf')
+            output_power_dbm = 10 * math.log10(output_power_watts * 1000)
             output_osnr_db = lin2db(output_power_watts / output_total_noise) if output_total_noise > 0 else float('inf')
 
             added_noise_mw = (output_total_noise - input_total_noise) * 1000
+
+            # --- 核心修复 #2: 同样检查 element 的 latency 属性值 ---
+            elem_latency = getattr(element, 'latency', None)
+            elem_latency_ms = elem_latency * 1000 if elem_latency is not None else 0
 
             path_results.append(SimulationStepResult(
                 element_id=element.uid,
@@ -102,12 +117,11 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
                 output_power_dbm=round(output_power_dbm, 2),
                 output_osnr_db=round(output_osnr_db, 2) if output_osnr_db != float('inf') else None,
                 added_noise_mw=added_noise_mw,
-                details={"latency_ms": element.latency * 1000 if hasattr(element, 'latency') else 0}
+                details={"latency_ms": elem_latency_ms}
             ))
 
         if not path_results:
-            raise SimulationError("Simulation failed to produce results. Check path and element parameters.",
-                                  status_code=500)
+            raise SimulationError("Simulation failed to produce results.", status_code=500)
 
         return SingleLinkSimulationResponse(
             path_results=path_results,

@@ -15,8 +15,8 @@ class SimulationStepResult(BaseModel):
     """
     element_id: str
     element_type: str
-    input_power_dbm: float
-    input_osnr_db: Optional[float]
+    input_power_dbm: Optional[float] = None
+    input_osnr_db: Optional[float] = None
     output_power_dbm: float
     output_osnr_db: Optional[float]
     added_noise_mw: float = Field(..., description="Noise power added by this element in mW.")

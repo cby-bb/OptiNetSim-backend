@@ -35,6 +35,42 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
     gnpy_network_json = convert_to_gnpy_json(network_model, request.path)
 
     try:
+        import sys
+        import json
+
+        print("=" * 50)
+        print(f"DEBUG: The program is trying to load this exact file path:")
+        print(f"'{EQPT_CONFIG_PATH}'")
+        print(f"Is this the file you are editing?")
+        print("-" * 50)
+
+        try:
+            with open(EQPT_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                file_content = f.read()
+                print("DEBUG: Content of the file as seen by the program:")
+                print(file_content)
+                print("=" * 50)
+
+                # 尝试手动解析，看看结构是什么
+                data = json.loads(file_content)
+                edfa_data = data.get('elements', {}).get('Edfa')
+                print(f"DEBUG: Type of 'Edfa' data is: {type(edfa_data)}")
+                if isinstance(edfa_data, list):
+                    print("DEBUG: The structure appears CORRECT (it's a list/array).")
+                elif isinstance(edfa_data, dict):
+                    print("DEBUG: The structure appears INCORRECT (it's a dict/object). THIS IS THE PROBLEM!")
+                else:
+                    print("DEBUG: The 'Edfa' structure is neither a list nor a dict.")
+
+        except FileNotFoundError:
+            print(f"FATAL DEBUG ERROR: The file at path '{EQPT_CONFIG_PATH}' was not found!")
+            sys.exit(1)  # 强制退出，因为文件不存在
+        except Exception as e:
+            print(f"FATAL DEBUG ERROR: An error occurred while reading or parsing the file: {e}")
+            sys.exit(1)  # 强制退出
+
+        print("=" * 50)
+        # --- 结束添加调试代码 ---
         equipment = load_equipment(str(EQPT_CONFIG_PATH))
         network = network_from_json(gnpy_network_json, equipment)
         build_network(network, equipment, 0, 0)

@@ -43,7 +43,7 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
     try:
         # 2. Load GNPy equipment database
         print("---------------------------------------------------------")
-        print(f"--- LOADING EQUIPMENT FROM THIS EXACT PATH: {EQPT_config_path.resolve()} ---")
+        print(f"--- LOADING EQUIPMENT FROM THIS EXACT PATH: {EQPT_CONFIG_PATH.resolve()} ---")
         print("======== START OF eqpt_config.json CONTENT BEING READ ========")
         try:
             print(EQPT_CONFIG_PATH.read_text())

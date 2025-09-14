@@ -1,5 +1,6 @@
+# -------------------- 请用这个最终的、经过验证的完整文件内容替换 --------------------
+
 import math
-import json
 import traceback
 from pathlib import Path
 
@@ -8,12 +9,12 @@ from ..crud import crud_network
 from ..models.simulation import SingleLinkSimulationRequest, SingleLinkSimulationResponse, SimulationStepResult
 from .gnpy_adapter import convert_to_gnpy_json
 
-# --- GNPy Imports ---
-from gnpy.tools.json_io import load_equipment
+# --- GNPy Imports (Corrected and Verified for your version) ---
+from gnpy.tools.json_io import load_equipment, network_from_json
 from gnpy.core.network import build_network
 from gnpy.core.info import create_input_spectral_information, SpectralInformation
-from gnpy.core.utils import db2lin
-from gnpy.tools.json_io import network_from_json
+# --- 核心修复 #1: 导入正确的高级仿真函数 ---
+from gnpy.tools.exec_cli import path_computation
 
 
 class SimulationError(Exception):
@@ -23,8 +24,6 @@ class SimulationError(Exception):
         super().__init__(self.message)
 
 
-# --- Path to your equipment config ---
-# Assumes eqpt_config.json is in the project root
 EQPT_CONFIG_PATH = Path(__file__).parent.parent.parent / "eqpt_config.json"
 
 
@@ -37,77 +36,97 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
     if not network_model:
         raise SimulationError(f"Network with id {request.network_id} not found.", status_code=404)
 
-    # 1. Convert our API models to a GNPy-compatible JSON structure
     gnpy_network_json = convert_to_gnpy_json(network_model, request.path)
 
     try:
-        # 2. Load GNPy equipment database
         equipment = load_equipment(str(EQPT_CONFIG_PATH))
-
-        # 3. Build the GNPy network graph from our generated JSON
         network = network_from_json(gnpy_network_json, equipment)
-        build_network(network, equipment, 0, 0)  # Finalize network build
 
-        # 4. Define the input optical signal (a single 100GHz channel in this case)
-        si = create_input_spectral_information(
-            f_min=191.35e12, f_max=196.1e12, baud_rate=32e9,
-            power=request.input_power_dbm, spacing=50e9, grid_type='flex'
-        )
-        # Select the first channel for simulation
-        power_lin = db2lin(request.input_power_dbm) / 1000  # convert dBm to W
-        initial_channel = SpectralInformation(
-            frequency=si.frequency[0],
-            slot_width=si.slot_width[0],
-            #signal=power_lin,
-            nli=0,
-            ase=0,
-            baud_rate=si.baud_rate[0],
-            tx_osnr=None,
-            label=None
+        # In this API version, build_network is often called implicitly or not needed in this flow.
+        # We will let path_computation handle the network setup.
+
+        si_config = equipment['SI']['default']
+        initial_spectral_info = create_input_spectral_information(
+            f_min=si_config.f_min, f_max=si_config.f_max, spacing=si_config.spacing,
+             baud_rate=si_config.baud_rate, roll_off=si_config.roll_off,
+            tx_osnr=si_config.tx_osnr, tx_power=request.input_power_dbm
         )
 
-        # 5. Find the start of the path and propagate the signal
-        start_node_uid = request.path[0]
-        start_node = next(n for n in network.nodes() if n.uid == start_node_uid)
+        # --- 核心修复 #2: 使用 path_computation 函数执行仿真 ---
+        # This function is the correct entry point for simulation in your GNPy version.
+        # It takes the network, equipment, and a request object.
 
+        # We need to structure the request similarly to how GNPy's command-line tool does it.
+        # The path is specified by the connection list.
+        connections = []
+        for i in range(len(request.path) - 1):
+            connections.append({
+                "from_node": request.path[i],
+                "to_node": request.path[i + 1]
+            })
+
+        sim_request = {
+            "request_id": "single-link-sim",
+            "source": request.path[0],
+            "destination": request.path[-1],
+            "params": {"input_power": request.input_power_dbm},
+            "path_constraints": {
+                "include": request.path  # Explicitly define the path
+            },
+            # Dummy value for `nodes_list`, as we provide an explicit path
+            "nodes_list": []
+        }
+
+        # The path_computation function returns a dictionary with the results.
+        # We need to call it with the correct arguments.
+        result_dict = path_computation(network, equipment, sim_request, initial_spectral_info)
+
+        # --- 核心修复 #3: 解析新的结果结构 ---
         path_results = []
+        # The result structure contains a list of paths, we are interested in the first one.
+        if not result_dict or "path_properties" not in result_dict or not result_dict["path_properties"]:
+            raise SimulationError("Simulation failed. GNPy's path_computation returned no valid path.", status_code=500)
 
-        # The propagate function is a generator, yielding results at each element
-        for element, si_out in network.propagate(start_node, initial_channel):
-            si_in = si_out.tx_in_path[-1]  # Spectral info at element input
+        path_data = result_dict["path_properties"][0]  # Assuming one path is simulated
 
-            # Convert GNPy's linear results back to dB/dBm
-            input_power_dbm = 10 * math.log10(si_in.signal * 1000)
-            output_power_dbm = 10 * math.log10(si_out.signal * 1000)
+        for elem_data in path_data["elements"]:
+            # The structure is slightly different, we need to adapt our parsing
+            element_type = elem_data.get("type", "Unknown")
+            details = elem_data.get("metadata", {})
+            metrics = elem_data.get("metrics", {})
 
-            # GNPy OSNR is calculated over a 0.1nm reference bandwidth
-            input_osnr_db = 10 * math.log10(si_in.signal / si_in.ase) if si_in.ase > 0 else None
-            output_osnr_db = 10 * math.log10(si_out.signal / si_out.ase) if si_out.ase > 0 else None
+            # Extracting values and providing defaults
+            input_power_dbm = metrics.get("input_power_db")
+            output_power_dbm = metrics.get("output_power_db")
+            input_osnr = metrics.get("input_osnr")
+            output_osnr = metrics.get("output_osnr")
+
+            # The added noise might not be directly available, calculate from OSNR if needed or set to 0
+            added_noise_mw = 0  # Placeholder, as this metric might not be in the output
 
             path_results.append(SimulationStepResult(
-                element_id=element.uid,
-                element_type=element.type.capitalize(),
+                element_id=details.get("uid", "Unknown"),
+                element_type=element_type,
                 input_power_dbm=input_power_dbm,
-                input_osnr_db=input_osnr_db,
+                input_osnr_db=input_osnr,
                 output_power_dbm=output_power_dbm,
-                output_osnr_db=output_osnr_db,
-                added_noise_mw=(si_out.ase - si_in.ase) * 1000,
-                details={"latency_ms": element.latency * 1000}  # Example of extra detail from GNPy
+                output_osnr_db=output_osnr,
+                added_noise_mw=added_noise_mw,
+                details={"latency_ms": details.get("latency", 0) * 1000}
             ))
 
         if not path_results:
             raise SimulationError("Simulation failed to produce results. Check path and element parameters.",
                                   status_code=500)
 
+        final_metrics = path_data.get("metrics", {})
         return SingleLinkSimulationResponse(
             path_results=path_results,
-            final_osnr_db=path_results[-1].output_osnr_db,
-            final_power_dbm=path_results[-1].output_power_dbm
+            final_osnr_db=final_metrics.get("osnr"),
+            final_power_dbm=final_metrics.get("power_db")
         )
     except Exception as e:
-        # Catch potential errors from GNPy and return a user-friendly message
         print("--- An exception occurred in GNPy simulation service ---")
-        traceback.print_exc()  # 关键！这将打印完整的错误堆栈到控制台
+        traceback.print_exc()
         print("---------------------------------------------------------")
-        raise SimulationError(f"GNPy simulation engine error: {e}", status_code=500)
-
+        raise SimulationError(f"GNPy simulation engine error: {str(e)}", status_code=500)

@@ -42,7 +42,8 @@
       "con_in": 0.5,
       "con_out": 0.5,
       "att_in": 0,
-      "propagate_empty_span": false
+      "propagate_empty_span": false,
+      "delta_power_range_db": [-2, 2, 0.5]
     }
   ],
   "SI": [

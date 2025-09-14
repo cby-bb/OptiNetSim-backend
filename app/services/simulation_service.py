@@ -42,6 +42,10 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
 
     try:
         # 2. Load GNPy equipment database
+        print("---------------------------------------------------------")
+        print(f"--- LOADING EQUIPMENT FROM THIS EXACT PATH: {EQPT_CONFIG_PATH.resolve()} ---")
+        print("---------------------------------------------------------")
+
         equipment = load_equipment(str(EQPT_CONFIG_PATH))
 
         # 3. Build the GNPy network graph from our generated JSON

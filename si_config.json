@@ -1,6 +1,7 @@
 {
-  "SI": {
-    "default": {
+  "SI": [
+    {
+      "type_variety": "default",
       "n_ch": 96,
       "spacing": 50e9,
       "f_min": 191.35e12,
@@ -8,5 +9,5 @@
       "roll_off": 0.15,
       "tx_osnr": 45
     }
-  }
+  ]
 }

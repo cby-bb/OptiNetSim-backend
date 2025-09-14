@@ -49,7 +49,7 @@ def convert_to_gnpy_json(network: NetworkInDB, path: List[str]) -> Dict[str, Any
             gnpy_el["params"] = {
                 # Override default operational parameters with our model's data
                 "operational": {
-                    "gain_target": element.params.gain,
+                    "gain_target": element.params.gain_target,
                     "att_in": 0,
                     "tilt_target": 0
                 }

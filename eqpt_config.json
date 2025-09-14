@@ -44,6 +44,12 @@
       "att_in": 0,
       "propagate_empty_span": false
     }
+  ],
+  "SI": [
+    {
+      "n_ch": 96,
+      "spacing": 50e9,
+      "f_min": 191.35e12
+    }
   ]
-
 }

@@ -1,5 +1,3 @@
-# -------------------- 请用这份最终的、修正了 NoneType 错误的完整文件内容替换 --------------------
-
 import math
 import traceback
 from pathlib import Path
@@ -35,52 +33,30 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
     gnpy_network_json = convert_to_gnpy_json(network_model, request.path)
 
     try:
-        import sys
-        import json
-
-        print("=" * 50)
-        print(f"DEBUG: The program is trying to load this exact file path:")
-        print(f"'{EQPT_CONFIG_PATH}'")
-        print(f"Is this the file you are editing?")
-        print("-" * 50)
-
-        try:
-            with open(EQPT_CONFIG_PATH, 'r', encoding='utf-8') as f:
-                file_content = f.read()
-                print("DEBUG: Content of the file as seen by the program:")
-                print(file_content)
-                print("=" * 50)
-
-                # 尝试手动解析，看看结构是什么
-                data = json.loads(file_content)
-                edfa_data = data.get('elements', {}).get('Edfa')
-                print(f"DEBUG: Type of 'Edfa' data is: {type(edfa_data)}")
-                if isinstance(edfa_data, list):
-                    print("DEBUG: The structure appears CORRECT (it's a list/array).")
-                elif isinstance(edfa_data, dict):
-                    print("DEBUG: The structure appears INCORRECT (it's a dict/object). THIS IS THE PROBLEM!")
-                else:
-                    print("DEBUG: The 'Edfa' structure is neither a list nor a dict.")
-
-        except FileNotFoundError:
-            print(f"FATAL DEBUG ERROR: The file at path '{EQPT_CONFIG_PATH}' was not found!")
-            sys.exit(1)  # 强制退出，因为文件不存在
-        except Exception as e:
-            print(f"FATAL DEBUG ERROR: An error occurred while reading or parsing the file: {e}")
-            sys.exit(1)  # 强制退出
-
-        print("=" * 50)
-        # --- 结束添加调试代码 ---
+        # 加载纯净的设备配置，这个调用现在不会再出错了
         equipment = load_equipment(str(EQPT_CONFIG_PATH))
+
         network = network_from_json(gnpy_network_json, equipment)
         build_network(network, equipment, 0, 0)
 
-        si_config = equipment['SI']['default']
+        # --- 核心修改：不再从配置文件读取SI，而是在代码中直接定义 ---
+        # 我们将之前在 JSON 中的 SI 参数直接写在这里
+        # 注意：baud_rate, roll_off, tx_osnr 等参数可能需要根据你的 Transceiver 定义来调整
+        # 这里使用了 gnpy 中常见的默认值
+        default_baud_rate = 32e9  # 对应 QPSK 模式
+        default_roll_off = 0.15
+        default_tx_osnr = 45  # 设定一个合理的发射 OSNR
+
         spectral_info = create_input_spectral_information(
-            f_min=si_config.f_min, f_max=si_config.f_max, spacing=si_config.spacing,
-             baud_rate=si_config.baud_rate, roll_off=si_config.roll_off,
-            tx_osnr=si_config.tx_osnr, tx_power=request.input_power_dbm
+            f_min=191.35e12,
+            f_max=191.35e12 + (96 - 1) * 50e9,  # f_min + (N-1)*spacing
+            spacing=50e9,
+            baud_rate=default_baud_rate,
+            roll_off=default_roll_off,
+            tx_osnr=default_tx_osnr,
+            tx_power=request.input_power_dbm  # 使用请求中的输入功率
         )
+        # --- 核心修改结束 ---
 
         node_map = {n.uid: n for n in network.nodes()}
         path_elements = []
@@ -94,6 +70,7 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
             raise SimulationError("Simulation path is empty.", status_code=400)
 
         path_results = []
+        # 我们只关心第一个信道的结果作为示例
         channel_index = 0
 
         transmitter = path_elements[0]
@@ -102,9 +79,8 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
                                   status_code=400)
 
         tx_output_power_dbm = request.input_power_dbm
-        tx_output_osnr = si_config.tx_osnr if si_config.tx_osnr else float('inf')
+        tx_output_osnr = default_tx_osnr
 
-        # --- 核心修复 #1: 检查 latency 属性值不为 None ---
         tx_latency = getattr(transmitter, 'latency', None)
         tx_latency_ms = tx_latency * 1000 if tx_latency is not None else 0
 
@@ -119,10 +95,13 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
             details={"latency_ms": tx_latency_ms}
         ))
 
+        # 从第二个设备开始传播
         for element in path_elements[1:]:
+            # 如果路径中遇到另一个收发器，则停止
             if isinstance(element, Transceiver):
                 break
 
+            # 记录传播前的状态
             input_power_watts = spectral_info.signal[channel_index]
             input_ase_watts = spectral_info.ase[channel_index]
             input_nli_watts = spectral_info.nli[channel_index]
@@ -130,8 +109,10 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
             input_power_dbm = 10 * math.log10(input_power_watts * 1000)
             input_osnr_db = lin2db(input_power_watts / input_total_noise) if input_total_noise > 0 else float('inf')
 
+            # 核心传播步骤
             element.propagate(spectral_info)
 
+            # 记录传播后的状态
             output_power_watts = spectral_info.signal[channel_index]
             output_ase_watts = spectral_info.ase[channel_index]
             output_nli_watts = spectral_info.nli[channel_index]
@@ -141,7 +122,6 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
 
             added_noise_mw = (output_total_noise - input_total_noise) * 1000
 
-            # --- 核心修复 #2: 同样检查 element 的 latency 属性值 ---
             elem_latency = getattr(element, 'latency', None)
             elem_latency_ms = elem_latency * 1000 if elem_latency is not None else 0
 

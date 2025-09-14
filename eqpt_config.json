@@ -1,48 +1,39 @@
 {
-  "elements": {
-    "Edfa": [
-      {
-        "type_variety": "default",
-        "gain_flatmax": 25,
-        "gain_min": 15,
-        "p_max": 23,
-        "nf_min": 5.5,
-        "nf_max": 10
-      }
-    ],
-    "Fiber": [
-      {
-        "type_variety": "default",
-        "ref_wavelength": 1.55e-06,
-        "length": 80,
-        "length_units": "km",
-        "loss_coef": 0.2,
-        "dispersion": 1.67e-05,
-        "gamma": 0.00127,
-        "pmd_coef": 0
-      }
-    ],
-    "Transceiver": [
-      {
-        "type_variety": "default",
-        "mode": [{
-          "format": "QPSK",
-          "baud_rate": 32e9
-        }]
-      }
-    ],
-    "Roadm": [
-      {
-        "type_variety": "default",
-        "target_pch_out_db": 0
-      }
-    ]
-  },
-  "SI": {
-    "default": {
-      "n_ch": 96,
-      "spacing": 50e9,
-      "f_min": 191.35e12
+  "Edfa": [
+    {
+      "type_variety": "default",
+      "gain_flatmax": 25,
+      "gain_min": 15,
+      "p_max": 23,
+      "nf_min": 5.5,
+      "nf_max": 10
     }
-  }
+  ],
+  "Fiber": [
+    {
+      "type_variety": "default",
+      "ref_wavelength": 1.55e-06,
+      "length": 80,
+      "length_units": "km",
+      "loss_coef": 0.2,
+      "dispersion": 1.67e-05,
+      "gamma": 0.00127,
+      "pmd_coef": 0
+    }
+  ],
+  "Transceiver": [
+    {
+      "type_variety": "default",
+      "mode": [{
+        "format": "QPSK",
+        "baud_rate": 32e9
+      }]
+    }
+  ],
+  "Roadm": [
+    {
+      "type_variety": "default",
+      "target_pch_out_db": 0
+    }
+  ]
 }

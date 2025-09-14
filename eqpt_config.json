@@ -35,5 +35,14 @@
       "type_variety": "default",
       "target_pch_out_db": 0
     }
+  ],
+  "Span": [
+    {
+      "type_variety": "default",
+      "fiber": "default",
+      "amplifier": "default",
+      "con_in": 0.5,
+      "con_out": 0.5
+    }
   ]
 }

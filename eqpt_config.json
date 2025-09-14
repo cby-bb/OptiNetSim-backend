@@ -11,7 +11,7 @@
   ],
   "Fiber": [
     {
-      "type_variety": "SSMF",
+      "type_variety": "default",
       "ref_wavelength": 1550e-9,
       "length": 80,
       "loss_coef": 0.2,

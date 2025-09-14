@@ -4,6 +4,7 @@ from ....core.database import get_database
 from ....services import simulation_service
 from ....services.simulation_service import SimulationError
 from ....models.simulation import SingleLinkSimulationRequest, SingleLinkSimulationResponse
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 router = APIRouter()
 

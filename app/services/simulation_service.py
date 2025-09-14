@@ -42,16 +42,6 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
 
     try:
         # 2. Load GNPy equipment database
-        print("---------------------------------------------------------")
-        print(f"--- LOADING EQUIPMENT FROM THIS EXACT PATH: {EQPT_CONFIG_PATH.resolve()} ---")
-        print("======== START OF eqpt_config.json CONTENT BEING READ ========")
-        try:
-            print(EQPT_CONFIG_PATH.read_text())
-        except Exception as e:
-            print(f"COULD NOT READ FILE: {e}")
-        print("========= END OF eqpt_config.json CONTENT BEING READ =========")
-        print("---------------------------------------------------------")
-
         equipment = load_equipment(str(EQPT_CONFIG_PATH))
 
         # 3. Build the GNPy network graph from our generated JSON

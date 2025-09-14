@@ -14,6 +14,7 @@
       "type_variety": "default",
       "ref_wavelength": 1550e-9,
       "length": 80,
+      "length_units": "km",
       "loss_coef": 0.2,
       "dispersion": 1.67e-05,
       "gamma": 0.00127,

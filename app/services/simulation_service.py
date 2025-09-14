@@ -1,5 +1,6 @@
 import math
 import json
+import traceback
 from pathlib import Path
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -105,5 +106,8 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
         )
     except Exception as e:
         # Catch potential errors from GNPy and return a user-friendly message
+        print("--- An exception occurred in GNPy simulation service ---")
+        traceback.print_exc()  # 关键！这将打印完整的错误堆栈到控制台
+        print("---------------------------------------------------------")
         raise SimulationError(f"GNPy simulation engine error: {e}", status_code=500)
 

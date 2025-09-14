@@ -45,5 +45,16 @@
       "con_out": 0.5,
       "delta_power_range_db": [0, 0, 0.1]
     }
+  ],
+  "SI": [
+    {
+      "type_variety": "default",
+      "n_ch": 96,
+      "spacing": 50e9,
+      "f_min": 191.35e12,
+      "baud_rate": 32e9,
+      "roll_off": 0.15,
+      "tx_osnr": 45
+    }
   ]
 }

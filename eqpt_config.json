@@ -1,0 +1,25 @@
+{
+  "EDFA": {
+    "default": {
+      "gain_flatmax": 35,
+      "gain_min": 15,
+      "p_max": 23,
+      "nf_min": 4.5,
+      "nf_max": 9,
+      "nf_model": {
+        "comment": "formula from 'oiseau' OLS design tool",
+        "type": "polynomial",
+        "params": [
+          10.5,
+          -0.3
+        ]
+      },
+      "type_variety": "default_edfa_variety",
+      "operational": {
+          "gain_target": 20,
+          "att_in": 0,
+          "tilt_target": 0
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-# -------------------- 这是带有诊断功能的最终调试文件 --------------------
+# -------------------- 这是已修正语法错误、带有诊断功能的最终调试文件 --------------------
 
 import math
 import traceback
@@ -30,10 +30,11 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
                                     request: SingleLinkSimulationRequest) -> SingleLinkSimulationResponse:
     network_model = await crud_network.get_network(db, request.network_id)
     if not network_model:
-        raise SimulationError(f"Network with id {request.network_id} not found.", status_code=44)
+        raise SimulationError(f"Network with id {request.network_id} not found.", status_code=404)
 
     gnpy_network_json = convert_to_gnpy_json(network_model, request.path)
 
+    # 整个仿真逻辑都应该在 try...except 块内部
     try:
         equipment = load_equipment(str(EQPT_CONFIG_PATH))
 
@@ -43,17 +44,16 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
         si_config = equipment['SI']['default']
 
         # --- !! 关键的诊断代码 !! ---
-        print("
-
-              - -- DEBUGGING
-        si_config
-        OBJECT - --")
+        print("--- DEBUGGING si_config OBJECT ---")
         print(f"Type of si_config: {type(si_config)}")
         print(f"Content of si_config: {si_config}")
-        print(f"All attributes of si_config: {dir(si_config)}")
-        print("------------------------------------
-
-              ")
+        # 使用 vars() 来查看实例的 __dict__，这通常比 dir() 更能揭示其数据属性
+        try:
+            print(f"vars(si_config): {vars(si_config)}")
+        except TypeError:
+            print("vars(si_config): object has no __dict__ (e.g., a namedtuple)")
+        print(f"All attributes (dir): {dir(si_config)}")
+        print("------------------------------------\n")
         # --- 诊断代码结束 ---
 
         spectral_info = create_input_spectral_information(
@@ -150,8 +150,7 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
     )
 
 except Exception as e:
-print("--- An exception occurred in GNPy simulation service ---")
-traceback.print_exc()
-print("---------------------------------------------------------")
-raise SimulationError(f"GNPy simulation engine error: {str(e)}", status_code=500)
-
+    print("--- An exception occurred in GNPy simulation service ---")
+    traceback.print_exc()
+    print("---------------------------------------------------------")
+    raise SimulationError(f"GNPy simulation engine error: {str(e)}", status_code=500)

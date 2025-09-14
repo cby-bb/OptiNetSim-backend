@@ -35,5 +35,15 @@
       "type_variety": "default",
       "target_pch_out_db": 0
     }
+  ],
+  "Span": [
+    {
+      "fiber": "SSMF",
+      "con_in": 0.5,
+      "con_out": 0.5,
+      "att_in": 0,
+      "propagate_empty_span": false
+    }
   ]
+
 }

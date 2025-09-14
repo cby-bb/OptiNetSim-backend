@@ -32,9 +32,7 @@
   "Roadm": [
     {
       "type_variety": "default",
-      "equalization": {
-        "type": "ideal"
-      }
+      "equalization_type": "ideal"
     }
   ]
 }

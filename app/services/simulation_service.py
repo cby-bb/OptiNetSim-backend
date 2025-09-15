@@ -1,4 +1,4 @@
-# -------------------- 这是真正最终的、保证可以运行的完整文件 --------------------
+# -------------------- 这是真正最终的、与 GNPy 规范完全同步的完整文件 --------------------
 
 import math
 import traceback
@@ -23,7 +23,6 @@ class SimulationError(Exception):
         super().__init__(self.message)
 
 
-# --- 核心修改: 只使用一个完整的配置文件 ---
 EQPT_CONFIG_PATH = Path(__file__).parent.parent.parent / "equipment.json"
 
 
@@ -36,19 +35,17 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
     gnpy_network_json = convert_to_gnpy_json(network_model, request.path)
 
     try:
-        # --- 核心修改: 只加载一次配置文件，不再有任何合并操作 ---
         equipment = load_equipment(str(EQPT_CONFIG_PATH))
 
         network = network_from_json(gnpy_network_json, equipment)
         build_network(network, equipment, 0, 0)
 
-        # 从干净加载的 equipment 对象中读取 si_config 对象
         si_config = equipment['SI']['default']
 
-        # --- 核心修改: 必须使用点(.)来访问对象属性 ---
+        # --- 核心修改: 不再计算 f_max，而是直接从对象中读取 gnpy 加载的 f_max 属性 ---
         spectral_info = create_input_spectral_information(
             f_min=si_config.f_min,
-            f_max=si_config.f_min + (si_config.n_ch - 1) * si_config.spacing,
+            f_max=si_config.f_max,
             spacing=si_config.spacing,
             baud_rate=si_config.baud_rate,
             roll_off=si_config.roll_off,
@@ -69,6 +66,8 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
             raise SimulationError("Simulation path is empty.", status_code=400)
 
         path_results = []
+        # 注意: gnpy 在内部处理信道，我们通常只需要关注一个或多个代表性信道。
+        # 这里我们选择第一个信道 (索引 0) 作为代表。
         channel_index = 0
 
         transmitter = path_elements[0]
@@ -77,7 +76,6 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
                                   status_code=400)
 
         tx_output_power_dbm = request.input_power_dbm
-        # 同样，这里也使用点(.)访问
         tx_output_osnr = si_config.tx_osnr
 
         tx_latency = getattr(transmitter, 'latency', None)
@@ -146,4 +144,3 @@ async def simulate_single_link_gnpy(db: AsyncIOMotorDatabase,
         traceback.print_exc()
         print("---------------------------------------------------------")
         raise SimulationError(f"GNPy simulation engine error: {str(e)}", status_code=500)
-

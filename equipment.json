@@ -5,7 +5,8 @@
       "gain_flatmax": 25,
       "gain_min": 15,
       "p_max": 23,
-      "nf": 5.5
+      "nf_min": 5.5,
+      "nf_max": 5.5
     }
   ],
   "Fiber": [

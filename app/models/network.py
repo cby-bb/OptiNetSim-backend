@@ -74,8 +74,6 @@ class FiberParams(ElementParamsBase):
     loss_coef: float = 0.215
     length_units: str = "km"
     att_in: float = 0.0
-    dispersion: float = 1.67e-05
-    gamma: float = 0.00127
 
 
 class RamanFiberParams(FiberParams):

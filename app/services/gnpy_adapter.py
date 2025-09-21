@@ -1,102 +1,96 @@
+# -------------------- 这是全新的、完整的、健壮的适配器文件 --------------------
+
 from typing import List, Dict, Any
-from ..models.network import NetworkInDB, DiscriminatedElementInDB
-from fastapi import HTTPException  # <--- 导入 HTTPException
-from starlette import status       # <--- 导入 status
+from ..models.network import Network
+
+# 一个从我们的前端节点类型到 GNPy 期望的类型/参数的映射。
+# 这使得适配器更易于维护。
+GNPY_TYPE_MAPPING = {
+    "Transceiver": "Transceiver",
+    "Roadm": "Roadm",
+    "Edfa": "Edfa",
+    "Fiber": "Fiber",
+}
 
 
-def convert_to_gnpy_json(network: NetworkInDB, path: List[str]) -> Dict[str, Any]:
+def convert_to_gnpy_json(network_model: Network, path: List[str]) -> Dict[str, Any]:
     """
-    Converts a network and a specific path into a GNPy-compatible JSON structure in memory.
+    将网络模型和指定路径转换为 GNPy 兼容的 JSON 结构。
     """
     gnpy_elements = []
 
-    # Filter only the elements in the specified path
-    path_elements = [el for el in network.elements if el.element_id in path]
-    # Maintain the order specified in the path
-    if len(path_elements) != len(path):
-        found_ids = {el.element_id for el in path_elements}
-        missing_ids = [pid for pid in path if pid not in found_ids]
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"The following element_ids from the path were not found in the network: {missing_ids}"
-        )
-    ordered_path_elements = sorted(path_elements, key=lambda el: path.index(el.element_id))
+    # 1. 为 GNPy 创建元素定义
+    for node in network_model.nodes:
+        # 我们只需要包含实际在请求路径中的元素
+        if node.id not in path:
+            continue
 
-    for element in ordered_path_elements:
-        gnpy_el = {
-            "uid": element.element_id,
+        gnpy_type = GNPY_TYPE_MAPPING.get(node.type)
+        if not gnpy_type:
+            # 对于未知的节点类型，跳过或引发错误
+            continue
+
+        element_def = {
+            "uid": node.id,
+            "type": gnpy_type,
             "metadata": {
                 "location": {
-                    "city": "DefaultCity",
-                    "region": "DefaultRegion",
-                    "latitude": 0,
-                    "longitude": 0
+                    "city": node.label,
+                    "latitude": node.y,
+                    "longitude": node.x
                 }
             }
         }
 
-        # --- Parameter Mapping ---
-        if element.type == "Transceiver":
-            gnpy_el["type"] = "Transceiver"
-            # In GNPy, Transceiver is mainly a placeholder for the start/end of the simulation
-            # We will define the signal properties separately.
-
-        elif element.type == "Fiber":
-            gnpy_el["type"] = "Fiber"
-            gnpy_el["params"] = {
-                "length": element.params.length,
-                "length_units": 'km',
-                "att_in": 0,
-                "con_in": 0.5,  # Default connector loss
-                "con_out": 0.5,
-                "type_variety": "SSMF",  # Assume Standard Single-Mode Fiber
-                "loss_coef": element.params.loss_coef,
-                "dispersion":element.params.dispersion,
-                "gamma":element.params.gamma
+        # 在 GNPy 中，光纤不是节点，而是由其参数定义。
+        # 我们在创建连接时处理它们。在这里，如果需要特定的覆盖，
+        # 我们可以添加一个 'params' 键，但目前我们依赖于 equipment.json 中的 'default' 类型。
+        # 对于放大器 (Edfa)，如果不是默认类型，我们可以指定 'type_variety'。
+        if gnpy_type in ["Edfa", "Roadm", "Transceiver"]:
+            element_def["params"] = {
+                "type_variety": "default"
             }
 
-        elif element.type == "Edfa":
-            gnpy_el["type"] = "Edfa"
-            # Use the 'default' EDFA type we defined in eqpt_config.json
-            gnpy_el["type_variety"] = "default"
-            gnpy_el["params"] = {
-                # Override default operational parameters with our model's data
-                "operational": {
-                    "gain_target": element.params.gain_target,
-                    "att_in": 0,
-                    "tilt_target": 0
-                }
-            }
-            # Note: We let GNPy calculate noise figure based on its internal model
-            # specified in eqpt_config.json for higher accuracy.
+        gnpy_elements.append(element_def)
 
-        elif element.type == "Roadm":
-            gnpy_el["type"] = "Roadm"
-            gnpy_el["params"] = {
-                # ROADMs have complex models in GNPy, here is a simplified version
-                "att_in": 0,
-                "per_degree_impairments": {
-                    "default": {
-                        "add_drop_osnr": 48,
-                        "pmd": 0.05,
-                        "cd": 2
-                    }
-                }
-            }
-
-        gnpy_elements.append(gnpy_el)
-
-    # --- Generate Connections ---
+    # 2. 为 GNPy 创建连接定义
     gnpy_connections = []
-    for i in range(len(path) - 1):
-        gnpy_connections.append({
-            "from_node": path[i],
-            "to_node": path[i + 1],
-            "from_node_port": 1,  # Using simple port numbers
-            "to_node_port": 1
-        })
 
-    return {
+    # 遍历路径以创建有向连接
+    for i in range(len(path) - 1):
+        from_node_id = path[i]
+        to_node_id = path[i + 1]
+
+        # 在网络模型中找到与此路径段对应的链路
+        # 这里假设是一个双向链路模型，我们不关心 source/target 的方向来查找链路。
+        link_data = None
+        for link in network_model.links:
+            if (link.source == from_node_id and link.target == to_node_id) or \
+                    (link.source == to_node_id and link.target == from_node_id):
+                link_data = link
+                break
+
+        if not link_data:
+            # 如果路径有效，这理想情况下不应该发生
+            raise ValueError(f"无法找到 {from_node_id} 和 {to_node_id} 之间的链路")
+
+        # 在 GNPy 中，一个光纤跨段是具有特定参数的连接
+        connection_def = {
+            "from_node": from_node_id,
+            "to_node": to_node_id,
+            "params": {
+                # 我们假设链路代表一个默认的光纤跨段
+                "type": "Span",
+                "type_variety": "default"
+            }
+        }
+        gnpy_connections.append(connection_def)
+
+    # 3. 组装最终的 GNPy JSON 对象
+    gnpy_network_json = {
         "elements": gnpy_elements,
         "connections": gnpy_connections
     }
+
+    return gnpy_network_json
+

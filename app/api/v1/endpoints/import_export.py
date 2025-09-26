@@ -1,4 +1,6 @@
 # app/api/v1/endpoints/import_export.py
+import json
+import os
 from fastapi import APIRouter, Depends, HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import ValidationError  # 导入 ValidationError
@@ -6,6 +8,8 @@ from pydantic import ValidationError  # 导入 ValidationError
 from ....core.database import get_database
 from ....crud import crud_network
 from ....models.network import NetworkDetailResponse, NetworkImport, NetworkResponse, SubTopologyImport
+from oopt.gnpy.tools.cli_examples import transmission_main_example
+
 
 router = APIRouter()
 
@@ -29,6 +33,67 @@ async def export_network(
             detail={"code": "NETWORK_NOT_FOUND", "message": f"Network with id {network_id} not found."}
         )
     # NetworkDetailResponse automatically handles the alias mapping for SI/Span
+    network = NetworkDetailResponse(
+        network_id=str(db_network.id),
+        **db_network.model_dump(by_alias=True)
+    )
+    gnpy_network = {
+        "network_name": network.network_name,
+        "elements":[],
+        "connections":[],
+    }
+    for element in network.elements:
+        gnpy_el = {
+            "uid": element.element_id,
+            "metadata": {
+                "location": {
+                    "city": "DefaultCity",
+                    "region": "DefaultRegion",
+                    "latitude": 0,
+                    "longitude": 0
+                }
+            }
+        }
+
+        if element.type == "Transceiver":
+            gnpy_el["type"] = "Transceiver"
+
+
+        elif element.type == "Fiber":
+            gnpy_el["type"] = "Fiber"
+            gnpy_el["type_variety"] = "SSMF"
+            gnpy_el["params"] = {
+                "length": element.params.length,
+                "att_in": 0,
+                "con_in": 0.5,
+                "con_out": 0.5,
+                "loss_coef": element.params.loss_coef,
+                "length_units": "km"
+            }
+
+        elif element.type == "Edfa":
+            gnpy_el["type"] = "Edfa"
+            gnpy_el["type_variety"] = element.type_variety
+            gnpy_el["operational"] = {
+                "gain_target": element.params.gain_target,
+                "att_in": 0,
+                "title_target": 0
+            }
+
+        gnpy_network["elements"].append(gnpy_el)
+
+    gnpy_connections = []
+    for connection in network.connections:
+        gnpy_cn = {
+            "from_node": connection.from_node,
+            "to_node": connection.to_node
+        }
+
+        gnpy_network["connections"].append(gnpy_cn)
+    with open('oopt/gnpy/example-data/network.json', 'w', encoding='utf8') as f:
+        json.dump(gnpy_network, f, ensure_ascii=False, indent=4)
+    command_str = "python oopt/gnpy/tools/cli_examples.py"
+    os.system(command_str)
     return NetworkDetailResponse(
         network_id=str(db_network.id),
         **db_network.model_dump(by_alias=True)  # Ensure aliases are used for export

@@ -1,6 +1,6 @@
 # app/api/v1/router.py
 from fastapi import APIRouter
-from .endpoints import networks, elements, connections, services, global_settings, import_export
+from .endpoints import networks, elements, connections, services, global_settings, import_export, simulation
 
 api_router = APIRouter()
 
@@ -11,4 +11,4 @@ api_router.include_router(connections.router, prefix="/networks/{network_id}/con
 api_router.include_router(services.router, prefix="/networks/{network_id}/services", tags=["Service Management"])
 api_router.include_router(global_settings.router, prefix="/networks/{network_id}", tags=["Global Network Settings"])
 api_router.include_router(import_export.router, prefix="/networks", tags=["Import/Export"]) # Note: /networks/import is a top-level route
-
+api_router.include_router(simulation.router, prefix="/simulation", tags=["Simulation"])

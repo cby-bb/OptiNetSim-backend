@@ -308,3 +308,20 @@ class SubTopologyImport(BaseModel):
     elements: List[DiscriminatedElementCreate]
     connections: List[ConnectionCreate]
     strategy: Literal["generate_new_id", "error"] = "generate_new_id"
+
+class SingleLinkSimulationRequest(BaseModel):
+    network_id: str = Field(..., description="The ID of the network to simulate within.")
+    source: str = Field(..., description="The source of the network.")
+    destination: str = Field(..., description="The destination of the network.")
+
+class SimulationResult(BaseModel):
+    element_uid: str
+    element_type: str
+    GSNR_01nm: float
+    GSNR_signal: float
+    OSNR_ASE: float
+    OSNR_ASE_01nm: float
+
+class SingleLinkSimulationResponse(BaseModel):
+    path_results: List[SimulationResult]
+    GSNR: Optional[float] = Field(..., description="The final GSNR at the end of the link.")

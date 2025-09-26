@@ -1,0 +1,21 @@
+{
+    "eq_result": [
+        {
+            "uid": "1f09a9a7-109f-66f5-8e2b-0bf7f8e34208",
+            "type": "Transceiver",
+            "gsnr_0.1nm": 40.0,
+            "gsnr_signal": 35.92,
+            "osnr_ase_0.1nm": 40.0,
+            "osnr_ase_signal": 35.92
+        },
+        {
+            "uid": "1f09a9a7-9d94-654d-abd1-e444cc6f5edb",
+            "type": "Transceiver",
+            "gsnr_0.1nm": 23.59,
+            "gsnr_signal": 19.51,
+            "osnr_ase_0.1nm": 23.85,
+            "osnr_ase_signal": 19.77
+        }
+    ],
+    "final_GSNR": 23.59
+}

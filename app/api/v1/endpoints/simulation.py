@@ -36,7 +36,7 @@ async def single_link(
         "destination" : simulation_request.destination,
     }
 
-    with open('oopt/gnpy/example-data/node.json', 'w', encoding='utf8') as f:
+    with open('node.json', 'w', encoding='utf8') as f:
         json.dump(source_destination, f, ensure_ascii=False, indent=4)
 
     network = NetworkDetailResponse(
@@ -96,9 +96,9 @@ async def single_link(
         }
 
         gnpy_network["connections"].append(gnpy_cn)
-    with open('oopt/gnpy/example-data/network.json', 'w', encoding='utf8') as f:
+    with open('network.json', 'w', encoding='utf8') as f:
         json.dump(gnpy_network, f, ensure_ascii=False, indent=4)
-    command_str = "python oopt/gnpy/tools/cli_examples.py"
+    command_str = "python cli_examples.py"
     os.system(command_str)
 
     with open('result.json','r',encoding='utf-8') as f:
